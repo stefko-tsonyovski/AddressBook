@@ -3,6 +3,7 @@ import "./App.css";
 import Layout from "./components/Layout";
 import AddressesList from "./components/addresses/AddressesList";
 import Login from "./components/Login";
+import Register from "./components/Register";
 import AddAddress from "./components/addresses/AddAddress";
 import SingleAddressPage from "./components/addresses/SingleAddressPage";
 import EditAddress from "./components/addresses/EditAddress";
@@ -32,6 +33,7 @@ function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<AddressesList />} />
         <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
 
         {/* <Route path="address">
           <Route index element={<AddPostForm />} />

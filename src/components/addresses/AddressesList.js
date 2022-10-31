@@ -140,8 +140,8 @@ const AddressesList = () => {
   }
 
   useEffect(() => {
-    dispatch(fetchAddresses(user?.uid));
-  }, [dispatch, user?.uid]);
+    dispatch(fetchAddresses(user?.id));
+  }, [dispatch, user?.id]);
 
   return (
     <>

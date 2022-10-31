@@ -123,7 +123,7 @@ const AddAddress = () => {
           notes,
           latitude,
           longitude,
-          userId: user.uid,
+          userId: user.id,
         };
         dispatch(addNewAddress(initialAddress));
 
