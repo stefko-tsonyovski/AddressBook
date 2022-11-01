@@ -58,7 +58,7 @@ const EditAddress = () => {
           email,
           phone,
           notes,
-          userId: user.uid,
+          userId: user.id,
         };
         dispatch(updateAddress(initialAddress));
 

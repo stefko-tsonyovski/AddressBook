@@ -1,4 +1,9 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import {
+  createSlice,
+  createAsyncThunk,
+  createEntityAdapter,
+  createSelector,
+} from "@reduxjs/toolkit";
 
 import { db } from "../../utils/firebase";
 import {
@@ -11,16 +16,19 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 
-const initialState = {
-  addresses: [],
+const addressesAdapter = createEntityAdapter({
+  sortComparer: (a, b) => b.name.localeCompare(a.name),
+});
+
+const initialState = addressesAdapter.getInitialState({
   status: "idle", //'idle' | 'loading' | 'succeeded' | 'failed'
   error: null,
-};
+});
 
 export const fetchAddresses = createAsyncThunk(
   "addresses/fetchAddresses",
-  async (userId) => {
-    const q = query(collection(db, "addresses"), where("userId", "==", userId));
+  async () => {
+    const q = query(collection(db, "addresses"));
 
     const querySnapshot = await getDocs(q);
     let result = [];
@@ -36,24 +44,14 @@ export const addNewAddress = createAsyncThunk(
   async (initialAddress) => {
     await addDoc(collection(db, "addresses"), initialAddress);
 
-    const q = query(
-      collection(db, "addresses"),
-      where("userId", "==", initialAddress.userId)
-    );
-
-    const querySnapshot = await getDocs(q);
-    let result = [];
-
-    querySnapshot.forEach((doc) => result.push(doc.data()));
-
-    return result;
+    return initialAddress;
   }
 );
 
 export const updateAddress = createAsyncThunk(
   "addresses/updateAddress",
   async (initialAddress) => {
-    const { id, userId } = initialAddress;
+    const { id } = initialAddress;
 
     const qUpdate = query(collection(db, "addresses"), where("id", "==", id));
 
@@ -63,24 +61,14 @@ export const updateAddress = createAsyncThunk(
       async (doc) => await setDoc(doc.ref, initialAddress)
     );
 
-    const q = query(collection(db, "addresses"), where("userId", "==", userId));
-
-    const querySnapshot = await getDocs(q);
-    let result = [];
-
-    querySnapshot.forEach((doc) => result.push(doc.data()));
-
-    return {
-      addresses: result.filter((a) => a.id !== id),
-      updatedAddress: initialAddress,
-    };
+    return initialAddress;
   }
 );
 
 export const deleteAddress = createAsyncThunk(
   "addresses/deleteAddress",
   async (initialAddress) => {
-    const { id, userId } = initialAddress;
+    const { id } = initialAddress;
 
     const qDelete = query(collection(db, "addresses"), where("id", "==", id));
 
@@ -88,14 +76,7 @@ export const deleteAddress = createAsyncThunk(
 
     querySnapshotDelete.forEach(async (doc) => await deleteDoc(doc.ref));
 
-    const q = query(collection(db, "addresses"), where("userId", "==", userId));
-
-    const querySnapshot = await getDocs(q);
-    let result = [];
-
-    querySnapshot.forEach((doc) => result.push(doc.data()));
-
-    return { addresses: result, deletedAddress: initialAddress };
+    return initialAddress;
   }
 );
 
@@ -110,77 +91,48 @@ const addressesSlice = createSlice({
       })
       .addCase(fetchAddresses.fulfilled, (state, action) => {
         state.status = "succeeded";
-        // Transform firebase response
-
-        let loadedAddresses = [...state.addresses];
-
-        action.payload.forEach((address) => {
-          if (!loadedAddresses.find((a) => a.id === address.id)) {
-            loadedAddresses.push(address);
-          }
-        });
-
-        // Add any fetched posts to the array
-        state.addresses = loadedAddresses;
+        addressesAdapter.upsertMany(state, action.payload);
       })
       .addCase(fetchAddresses.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.error.message;
       })
       .addCase(addNewAddress.fulfilled, (state, action) => {
-        let loadedAddresses = [...state.addresses];
-
-        action.payload.forEach((address) => {
-          if (!loadedAddresses.find((a) => a.id === address.id)) {
-            loadedAddresses.push(address);
-          }
-        });
-
-        // Add any fetched posts to the array
-        state.addresses = loadedAddresses;
+        addressesAdapter.addOne(state, action.payload);
       })
       .addCase(updateAddress.fulfilled, (state, action) => {
-        let loadedAddresses = [...state.addresses];
-
-        action.payload.addresses.forEach((address) => {
-          if (!loadedAddresses.find((a) => a.id === address.id)) {
-            loadedAddresses.push(address);
-          }
-        });
-
-        loadedAddresses = loadedAddresses.filter(
-          (a) => a.id !== action.payload.updatedAddress.id
-        );
-
-        loadedAddresses.push(action.payload.updatedAddress);
-
-        // Add any fetched posts to the array
-        state.addresses = loadedAddresses;
+        addressesAdapter.upsertOne(state, action.payload);
       })
       .addCase(deleteAddress.fulfilled, (state, action) => {
-        let loadedAddresses = [...state.addresses];
+        if (!action.payload?.id) {
+          console.log("Delete could not complete");
+          console.log(action.payload);
+          return;
+        }
 
-        action.payload.addresses.forEach((address) => {
-          if (!loadedAddresses.find((a) => a.id === address.id)) {
-            loadedAddresses.push(address);
-          }
-        });
-
-        loadedAddresses = loadedAddresses.filter(
-          (a) => a.id !== action.payload.deletedAddress.id
-        );
-
-        // Add any fetched posts to the array
-        state.addresses = loadedAddresses;
+        const { id } = action.payload;
+        addressesAdapter.removeOne(state, id);
       });
   },
 });
 
-export const selectAllAddresses = (state) => state.addresses.addresses;
+//getSelectors creates these selectors and we rename them with aliases using destructuring
+export const {
+  selectAll: selectAllAddresses,
+  selectById: selectAddressById,
+  selectIds: selectAddressIds,
+  // Pass in a selector that returns the addresses slice of state
+} = addressesAdapter.getSelectors((state) => state.addresses);
+
+export const selectAddressIdsByUserAndSearchValue = createSelector(
+  [selectAllAddresses, (state, userId) => userId],
+  (addresses, userId) =>
+    addresses
+      .filter((address) => address.userId === userId)
+      .map((address) => address.id)
+);
+
 export const selectAddressesStatus = (state) => state.addresses.status;
 export const selectAddressesError = (state) => state.addresses.error;
-
-export const selectAddressById = (state, addressId) =>
-  state.addresses.addresses.find((address) => address.id === addressId);
 
 export default addressesSlice.reducer;
