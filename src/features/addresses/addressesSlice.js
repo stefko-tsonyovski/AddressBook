@@ -124,7 +124,7 @@ export const {
   // Pass in a selector that returns the addresses slice of state
 } = addressesAdapter.getSelectors((state) => state.addresses);
 
-export const selectAddressIdsByUserAndSearchValue = createSelector(
+export const selectAddressIdsByUser = createSelector(
   [selectAllAddresses, (state, userId) => userId],
   (addresses, userId) =>
     addresses

@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 import {
   selectAddressesStatus,
   selectAddressesError,
-  selectAddressIdsByUserAndSearchValue,
+  selectAddressIdsByUser,
 } from "../../features/addresses/addressesSlice";
 
 import { useAtom } from "jotai";
@@ -34,7 +34,7 @@ const AddressesList = () => {
   const [searchValue] = useAtom(searchValueAtom);
 
   const addressIds = useSelector((state) =>
-    selectAddressIdsByUserAndSearchValue(state, user?.id, searchValue)
+    selectAddressIdsByUser(state, user?.id)
   );
   const status = useSelector(selectAddressesStatus);
   const error = useSelector(selectAddressesError);
