@@ -124,13 +124,20 @@ export const {
   // Pass in a selector that returns the addresses slice of state
 } = addressesAdapter.getSelectors((state) => state.addresses);
 
-export const selectAddressIdsByUser = createSelector(
-  [selectAllAddresses, (state, userId) => userId],
-  (addresses, userId) =>
-    addresses
-      .filter((address) => address.userId === userId)
-      .map((address) => address.id)
-);
+export const selectAddressIdsByUserAndSearchValue = (
+  addresses,
+  userId,
+  searchValue
+) =>
+  addresses
+    .filter(
+      (a) =>
+        a.userId === userId &&
+        (a.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+          a.phone.toLowerCase().includes(searchValue.toLowerCase()) ||
+          a.address.toLowerCase().includes(searchValue.toLowerCase()))
+    )
+    .map((a) => a.id);
 
 export const selectAddressesStatus = (state) => state.addresses.status;
 export const selectAddressesError = (state) => state.addresses.error;
